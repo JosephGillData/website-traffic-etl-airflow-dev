@@ -1,0 +1,10 @@
+PROJECT_ID=website-traffic-etl-airflow
+ENV_NAME=traffic-etl-2
+REGION=europe-west3
+COMPOSER_SA=composer-sa
+GCS_BUCKET_DEV="joegilldata-website-traffice-etl-airflow-dev"
+GCS_BUCKET_LIVE="joegilldata-website-traffice-etl-airflow-live"
+SA_EMAIL="$COMPOSER_SA@$PROJECT_ID.iam.gserviceaccount.com"
+SMTP_MAIL_FROM=joegilldata@gmail.com
+SMTP_APP_PASSWORD="utzs hvsl tubl hqf"
+GCS_BUCKET="$GCS_BUCKET_DEV"

@@ -1,0 +1,13 @@
+cat > .gcloudignore << 'EOF'
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+.venv/**
+.idea/
+.vscode/
+.git/
+.git/**
+EOF
