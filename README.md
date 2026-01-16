@@ -1,6 +1,6 @@
 # Website Traffic ETL with Apache Airflow (GCP)
 
-This repository demonstrates an **end-to-end Data Engineering ETL pipeline** built with **Apache Airflow**, running **locally in Docker**, and integrating with **Google Cloud Platform (GCP)**.
+This repository demonstrates an **end-to-end Data Engineering ETL pipeline** built with **Apache Airflow**, running **locally in Docker**, and integrating with [**Google Cloud Platform (GCP)**](https://console.cloud.google.com).
 
 The project is intentionally designed as a **portfolio-quality example** for Data Engineering interviews, showcasing production-minded practices such as:
 
