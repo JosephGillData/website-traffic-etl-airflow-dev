@@ -1,10 +1,86 @@
-# Website Traffic ETL with Apache Airflow
+# Website Traffic ETL with Apache Airflow (GCP)
 
-This README file has been created using a Linux terminal.
+This repository demonstrates an **end-to-end Data Engineering ETL pipeline** built with **Apache Airflow**, running **locally in Docker**, and integrating with **Google Cloud Platform (GCP)**.
 
-This project uses the Google Cloud SDK (`gcloud`). - This is a prerequisite for the linux terminal.
+The project is intentionally designed as a **portfolio-quality example** for Data Engineering interviews, showcasing production-minded practices such as:
 
-### Clone and navigate to the repo
+- Airflow DAG design
+- Dockerized local development
+- GCP authentication via Application Default Credentials (ADC)
+- Secure configuration via environment variables
+- Cloud Storage–based ingestion
+- Clear operational setup and teardown via CLI
+
+---
+
+## What This Project Does
+
+At a high level, this project:
+
+1. **Reads website traffic data** from a CSV file stored in **Google Cloud Storage**
+2. **Processes and splits traffic data** by:
+   - AM vs PM
+   - Day of week
+3. **Conditionally triggers downstream tasks** in Airflow
+4. **Sends email notifications** based on business logic
+5. Runs **end-to-end in Apache Airflow**, orchestrated locally using Docker
+
+This mirrors a common real-world pattern:
+
+> Cloud object storage → Airflow ingestion → transformation → branching → notification
+
+---
+
+## Architecture Overview
+
+### Local Development
+- Apache Airflow runs inside Docker
+- DAGs are mounted into the container
+- Logs and metadata are persisted locally
+
+### Cloud Integration
+- Google Cloud Storage (GCS) hosts source data
+- Authentication uses **GCP Application Default Credentials**
+- Airflow connects to GCP using the `google_cloud_default` connection
+
+Local Machine
+├── Docker + Airflow
+│ ├── DAG orchestration
+│ ├── PythonOperators
+│ └── Email notifications
+│
+└── Google Cloud Platform
+└── Cloud Storage (CSV source data)
+
+
+---
+
+## Tech Stack
+
+- Apache Airflow
+- Docker & Docker Compose
+- Python
+- Google Cloud Platform
+  - Cloud Storage
+  - gcloud CLI
+- Linux / CLI-first workflow
+
+---
+
+## Prerequisites
+
+You must have the following installed locally:
+
+- Python 3.10+
+- Docker & Docker Compose
+- Google Cloud SDK (`gcloud`)
+- A GCP project with billing enabled
+
+---
+
+## Setup Instructions (End-to-End)
+
+#### Clone the Repository
 
 ```bash
 cd ~
@@ -12,34 +88,25 @@ git clone git@github.com:JosephGillData/website-traffic-etl-airflow-dev.git
 cd website-traffic-etl-airflow-dev
 ```
 
-### Create a virtual environment
+#### Create and Activate Virtual Environment
 
 ```bash
 python -m venv venv
-```
-
-### Activate the virtual environment
-
-```bash
 source venv/bin/activate
 ```
 
-### Install required packages
-
+#### Install Python Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Create .env file
-
+#### Create Environment Configuration
 ```bash
 cp .env.example .env
-# edit .env and set variable values
+# Edit .env and set required values
 ```
 
-### Load environment variables into your shell
-
-Load the variables defined in your .env file into your current shell session so they can be accessed by docker-composer.yaml
+#### Load the variables into your shell so Docker Compose can access them:
 
 ```bash
 set -a
@@ -47,65 +114,50 @@ source .env
 set +a
 ```
 
-## Google Cloud Setup
+### Google Cloud Setup
 
-### Authenticate with Google Cloud
-
-Ensure you are authenticated and have the correct project selected:
+#### Authenticate with GCP
 
 ```bash
 gcloud auth login
 gcloud auth application-default login
 ```
 
-### Ensure you have a GCP project
-
-You can use an existing project or create a new one via the CLI.
-
-To create a new project:
+#### Create or Select a GCP Project
 
 ```bash
-gcloud projects create website-traffic-etl-dev \
-  --name="Website Traffic ETL Dev"
+gcloud projects create "$PROJECT_ID" --name="PROJECT_NAME"
 ```
 
-> **Note:** Creating a project requires an active billing account.
-
-### Set project + create bucket + upload file
+#### Configure Project, Billing, and Storage
 
 ```bash
 gcloud config set project "$PROJECT_ID"
-
+gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT_ID"
 gcloud auth application-default set-quota-project "$PROJECT_ID"
 
 gcloud storage buckets create "gs://$GCS_BUCKET" \
   --location=EU \
   --uniform-bucket-level-access
 
-gcloud storage cp ./data/traffic_data.csv "gs://$GCS_BUCKET/data/traffic_data.csv"
+gcloud storage cp ./data/traffic_data.csv \
+  "gs://$GCS_BUCKET/data/traffic_data.csv"
 ```
 
-### Prep local folders for docker permissions
+### Docker + Airflow Preparation
 
-When running Airflow locally in Docker, the container writes logs and metadata to mounted directories on the host (./logs and ./sqlite).
-
-Create the required directories and grant write access:
+When running Airflow locally, Docker containers must be able to write logs and metadata to the host filesystem.
 
 ```bash
 mkdir -p logs sqlite
 chmod -R 777 logs sqlite
+
 chmod 755 ~/.config
 chmod 755 ~/.config/gcloud
 chmod 644 ~/.config/gcloud/application_default_credentials.json
 ```
 
-### Create the Airflow GCP connection (after it’s running)
-
-```bash
-docker compose exec airflow airflow connections add google_cloud_default \
-  --conn-type google_cloud_platform \
-  --conn-extra '{"project":"'"$PROJECT_ID"'","num_retries":5}'
-```
+This ensures the Airflow container can read your GCP credentials via ADC.
 
 ### Start Airflow
 
@@ -113,224 +165,49 @@ docker compose exec airflow airflow connections add google_cloud_default \
 docker compose up -d
 ```
 
-Wait ~30 seconds for initialization, then check status:
+Wait ~30 seconds for initialization, then verify:
 
 ```bash
 docker compose ps
 ```
 
-### Stop Airflow
+Airflow UI will be available at:
+
+```bash
+http://localhost:8080
+```
+
+### Configure Airflow GCP Connection
+
+Once Airflow is running, create the GCP connection used by the DAG:
+
+```bash
+docker compose exec airflow airflow connections add google_cloud_default \
+  --conn-type google_cloud_platform \
+  --conn-extra '{"project":"'"$PROJECT_ID"'","num_retries":5}'
+```
+
+This connection allows Airflow to authenticate to GCP using ADC.
+
+### Running the Pipeline
+
+1. Open the Airflow UI
+2. Enable the traffic_analysis DAG
+3. Trigger a manual run
+4. Observe task execution, branching, and email notifications
+
+The pipeline runs **end-to-end** using data pulled directly from GCS.
+
+### Stopping / Resetting Airflow
 
 ```bash
 docker compose down
 ```
 
-### Redeploy the ariflow model with logs
+To fully reset and redeploy (including logs):
 
 ```bash
 docker compose down --remove-orphans
 docker compose up -d
 docker compose logs -f airflow
-```
-
-## Deploy to Google Cloud (Cloud Composer)
-
-This guide explains how to deploy the **Website Traffic ETL with Apache Airflow**
-project to **Google Cloud Platform** using **Cloud Composer (managed Airflow)**,
-entirely via the **command line**.
-
-Cloud Composer runs Airflow on **Google Kubernetes Engine (GKE)** and removes the
-need to manage Airflow infrastructure yourself.
-
-### Enable the required APIs.
-
-```bash
-gcloud services enable \
-  composer.googleapis.com \
-  storage.googleapis.com \
-  compute.googleapis.com \
-  iam.googleapis.com \
-  cloudresourcemanager.googleapis.com
-```
-
-Create a service account for the cloud composer.
-
-```bash
-gcloud iam service-accounts create $COMPOSER_SA \
-  --display-name "Cloud Composer Service Account"
-```
-
-Grant the required roles.
-
-```bash
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$SA_EMAIL" \
-  --role="roles/composer.worker"
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$SA_EMAIL" \
-  --role="roles/storage.admin"
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$SA_EMAIL" \
-  --role="roles/logging.logWriter"
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$SA_EMAIL" \
-  --role="roles/monitoring.metricWriter"
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:service-<PROJECT_NUMBER>@cloudcomposer-accounts.iam.gserviceaccount.com" \
-  --role="roles/composer.ServiceAgentV2Ext"
-```
-
-### Create the Cloud Composer environment
-
-Create the Cloud Composer environment that will run your Airflow DAGs.
-This step typically takes 10–25 minutes to complete.
-
-During creation, we explicitly configure Airflow to use the built-in SMTP email backend and Gmail’s SMTP settings. This ensures that task failure notifications and other Airflow emails are sent using the specified Google email address, rather than the default SendGrid integration.
-
-```bash
-gcloud composer environments create "$ENV_NAME" \
-  --location "$REGION" \
-  --service-account "$SA_EMAIL" \
-  --image-version "composer-2.16.1-airflow-2.9.3" \
-  --env-variables=GCS_BUCKET="$GCS_BUCKET_LIVE" \
-  --airflow-configs=email-email_backend=airflow.utils.email.send_email_smtp \
-  --airflow-configs=smtp-smtp_host="smtp.gmail.com" \
-  --airflow-configs=smtp-smtp_port="587" \
-  --airflow-configs=smtp-smtp_starttls="True" \
-  --airflow-configs=smtp-smtp_ssl="False" \
-  --airflow-configs=smtp-smtp_mail_from="$SMTP_MAIL_FROM"
-```
-
-### Export the Composer GCS bucket for reuse
-
-Cloud Composer creates a Google Cloud Storage bucket internally to store DAGs, logs, and runtime files. This bucket name is not automatically exposed to your local shell, but you often need it for tasks like uploading data or configuring Airflow variables.
-
-Note that this might be wrong as we are not allowing the user to set the production bucket.
-
-```bash
-export DAG_GCS_PREFIX=$(gcloud composer environments describe "$ENV_NAME" \
-  --location "$REGION" \
-  --format="value(config.dagGcsPrefix)")
-
-export GCS_BUCKET=$(echo "$DAG_GCS_PREFIX" | sed -E 's#^gs://([^/]+)/.*#\1#')
-
-printenv DAG_GCS_PREFIX GCS_BUCKET
-```
-
-### Configure SMTP credentials in Airflow
-
-Airflow’s SMTP email backend requires authentication credentials in order to send emails through Gmail. While SMTP host, port, and TLS settings are configured at environment creation time, sensitive credentials (username and password) must be stored separately.
-
-In this step, we create (or replace) the smtp_default Airflow connection and securely store the Gmail login and app password. Airflow automatically uses this connection when sending email notifications via the SMTP backend, so DAG code does not need to reference credentials directly.
-
-```bash
-gcloud composer environments run "$ENV_NAME" \
-  --location "$REGION" \
-  connections -- add smtp_default \
-  --conn-type email \
-  --conn-host smtp.gmail.com \
-  --conn-login joegilldata@gmail.com \
-  --conn-password "$SMTP_APP_PASSWORD" \
-  --conn-port 587 \
-  --conn-extra '{"disable_ssl": true, "disable_tls": false}'
-```
-
-If required, you can see if the smtp_default exists.
-
-```bash
-gcloud composer environments run "$ENV_NAME" --location "$REGION" connections -- get smtp_default
-```
-
-If required, you can delete the smtp_default code.
-
-```bash
-gcloud composer environments run "$ENV_NAME" --location "$REGION" connections -- delete smtp_default
-```
-
-### Store the Composer GCS bucket in Airflow
-
-Cloud Composer creates and manages a Google Cloud Storage bucket as part of the environment infrastructure. While this bucket is known to Composer, it is not automatically available inside Airflow DAGs.
-
-To make the bucket name accessible at runtime, we store it as an Airflow Variable. This allows DAG code to reference the correct bucket without hardcoding environment-specific values.
-
-```bash
-export DAG_GCS_PREFIX=$(gcloud composer environments describe "$ENV_NAME" \
-  --location "$REGION" \
-  --format="value(config.dagGcsPrefix)")
-
-export GCS_BUCKET=$(echo "$DAG_GCS_PREFIX" | sed -E 's#^gs://([^/]+)/.*#\1#')
-
-printenv DAG_GCS_PREFIX GCS_BUCKET
-```
-
-### Verify Airflow variables
-
-List the Airflow variables available to DAGs at runtime. This confirms that required configuration values (such as the Composer GCS bucket name) have been successfully stored in the Airflow metadata database.
-
-You should see only variables that have been explicitly set for DAG runtime use. For this project, that means the GCS_BUCKET variable. You should not see Airflow configuration settings or values from your local environment.
-
-```bash
-gcloud composer environments run "$ENV_NAME" \
-  --location "$REGION" \
-  variables -- list
-```
-
-### Sync DAGs to Cloud Composer
-
-Mirror the local dags/ directory to the Cloud Composer–managed DAGs bucket so changes appear in the Airflow UI. This command keeps the remote directory in sync with the local repo, removing stale DAGs and excluding Python cache artifacts (__pycache__, .pyc).
-Sync local repo to GCP Composer
-
-```bash
-gsutil -m rsync -r -d -x '(.*/__pycache__/.*|.*\.pyc$)' ./dags "$DAG_GCS_PREFIX"
-```
-
-## Troubleshooting
-
-### "Cannot connect to Docker daemon"
-
-```bash
-# If using Docker Desktop, make sure it's running
-# If using Docker Engine in WSL:
-sudo service docker start
-```
-
-### "Permission denied" on logs/
-
-```bash
-# Set correct ownership
-sudo chown -R $(id -u):$(id -g) logs/
-```
-
-### DAG not appearing
-
-```bash
-# Check for syntax errors
-docker compose exec airflow-webserver python /opt/airflow/dags/task-3.py
-
-# Or check scheduler logs
-docker compose logs airflow-scheduler
-```
-
-### Airflow Bash Terminal
-
-When the Airflow container is being run, you can excecute commands within it by creating a bach terminal.
-
-```bash
-docker compose exec airflow bash
-```
-
-Inside this bash terminal, you can see which google auth files are available at run time.
-
-```bash
-ls /home/airflow/.config/gcloud/application_default_credentials.json
-```
-
-You can exit the Airflow contianer by running.
-
-```bash
-exit
 ```
