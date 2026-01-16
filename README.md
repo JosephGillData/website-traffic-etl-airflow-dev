@@ -162,11 +162,7 @@ Wait ~30 seconds for initialization, then verify:
 docker compose ps
 ```
 
-Airflow UI will be available at:
-
-```bash
-http://localhost:8080
-```
+Airflow UI will be available at: [http://localhost:8080](http://localhost:8080)
 
 ### Configure Airflow GCP Connection
 
