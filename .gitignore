@@ -46,3 +46,4 @@ Thumbs.db
 /.claude
 
 /airflow_home
+/sqlite

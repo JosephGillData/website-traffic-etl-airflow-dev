@@ -1,71 +1,5 @@
 # Website Traffic ETL with Apache Airflow
 
-An ETL pipeline using Apache Airflow that analyzes website traffic data and sends daily email reports with the top 3 IP addresses by traffic volume. This project practices CI/CD deployment where developments can be made in a dev (local) envronment and be pushed into a live (GCP) environment.
-
-## Author
-
-**Joseph Gill** - [joegilldata.com](https://joegilldata.com)
-
-## TODO
-- Improve the read me by running through it end to end
-- Work on improved deployment via CI/CD pipelines in GitHub Actions
-- Change it to a live data source (make the repo actually cool/useful)
-
-## Tech Stack
-
-- **Airflow 2.7.0** - Workflow orchestration
-- **PostgreSQL 15** - Metadata database
-- **Python 3.11** - Runtime (inside container)
-- **pandas/numpy** - Data processing
-
-## Prerequisites
-
-- Google Cloud account
-- Create a new GCP project
-- Select a billing account for your GCP project
-- `gcloud` CLI installed
-- `gsutil` (included with gcloud)
-- Ubuntu / WSL terminal recommended
-
-## Project Structure
-
-```
-website-traffic-etl-airflow/
-├── dags/
-│   └── task-3.py           # Main ETL DAG
-├── data/
-│   └── traffic_data.csv    # Sample traffic data (61K rows)
-├── logs/                   # Airflow logs (auto-generated) 
-├── plugins/                # Custom Airflow plugins
-├── docker-compose.yaml     # Docker services configuration
-├── .env                    # Environment variables (AIRFLOW_UID)
-└── README.md
-```
-
-## Where Things Live
-
-| What | Location |
-|------|----------|
-| DAGs (your pipelines) | `./dags/` |
-| Logs | `./logs/` |
-| Input data | `./data/` |
-| Airflow UI | http://localhost:8080 |
-
-## The Pipeline
-
-The `task_3` DAG runs daily at midnight and:
-
-1. **Extracts** traffic data from CSV
-2. **Transforms** by filtering low-traffic IPs and splitting AM/PM
-3. **Loads** by sending email reports (requires SMTP config)
-
-```
-read_traffic_data → filter_ips → split_am_pm → filter_am → day_of_week → [do_nothing_am, send_email_am]
-                                             → filter_pm → send_email_pm
-```
-
-## Local Development
-
 ### Clone and navigate to the repo
 
 ```bash
@@ -87,13 +21,9 @@ source .env
 set +a
 ```
 
-Within your GCP account, create a project and within that project create two buckets.
+### GCP structure
 
-```bash
-gsutil mb gs://traffic-data-dev
-gsutil mb gs://traffic-data-prod
-```
-
+Within your GCP account, create a project and within that project create the development bucket.
 Upload your traffic_data.csv file to the buckets in ./data/traffic_data.csv.
 
 ### Set your user ID (avoids permission issues)
@@ -125,6 +55,14 @@ Fix by making the file world-readable:
 chmod 644 ~/.config/gcloud/application_default_credentials.json
 ```
 
+### Create the Google connection
+
+```bash
+docker compose exec airflow airflow connections add google_cloud_default \
+  --conn-type google_cloud_platform \
+  --conn-extra '{"project":"'"$PROJECT_ID"'","num_retries":5}'
+```
+
 ### Start Airflow
 
 ```bash
@@ -136,22 +74,6 @@ Wait ~30 seconds for initialization, then check status:
 ```bash
 docker compose ps
 ```
-
-All services should show "healthy" or "running".
-
-### Access the Airflow UI
-
-Open **http://localhost:8080** in your browser.
-
-| | |
-|---|---|
-| **Username** | `admin` |
-| **Password** | `admin` |
-
-### Test run a DAG
-
-1. Find `traffic_analysis` in the DAG list
-2. Click the **Play** button to trigger a manual run
 
 ### Stop Airflow
 
