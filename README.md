@@ -11,8 +11,6 @@ The project is intentionally designed as a **portfolio-quality example** for Dat
 - Cloud Storage–based ingestion
 - Clear operational setup and teardown via CLI
 
----
-
 ## What This Project Does
 
 At a high level, this project:
@@ -29,8 +27,6 @@ This mirrors a common real-world pattern:
 
 > Cloud object storage → Airflow ingestion → transformation → branching → notification
 
----
-
 ## Architecture Overview
 
 ### Local Development
@@ -43,17 +39,16 @@ This mirrors a common real-world pattern:
 - Authentication uses **GCP Application Default Credentials**
 - Airflow connects to GCP using the `google_cloud_default` connection
 
+<pre>
 Local Machine
 ├── Docker + Airflow
-│ ├── DAG orchestration
-│ ├── PythonOperators
-│ └── Email notifications
+│   ├── DAG orchestration
+│   ├── PythonOperators
+│   └── Email notifications
 │
 └── Google Cloud Platform
-└── Cloud Storage (CSV source data)
-
-
----
+    └── Cloud Storage (CSV source data)
+</pre>
 
 ## Tech Stack
 
@@ -65,8 +60,6 @@ Local Machine
   - gcloud CLI
 - Linux / CLI-first workflow
 
----
-
 ## Prerequisites
 
 You must have the following installed locally:
@@ -75,8 +68,6 @@ You must have the following installed locally:
 - Docker & Docker Compose
 - Google Cloud SDK (`gcloud`)
 - A GCP project with billing enabled
-
----
 
 ## Setup Instructions (End-to-End)
 
