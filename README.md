@@ -1,19 +1,40 @@
 # Website Traffic ETL with Apache Airflow
 
+This README file has been created using a Linux terminal.
+
 ### Clone and navigate to the repo
 
 ```bash
-# In your WSL terminal (Ubuntu)
 cd ~
-git clone https://github.com/YOUR_USERNAME/website-traffic-etl-airflow.git
-cd website-traffic-etl-airflow
+git clone git@github.com:JosephGillData/website-traffic-etl-airflow-dev.git
+cd website-traffic-etl-airflow-dev
 ```
 
-### Load environment variables into your shell
+### Create a virtual environment
+
+```bash
+python -m venv venv
+```
+
+### Activate the virtual environment
+
+```bash
+source venv/bin/activate
+```
+
+### Install required packages
+
+```bash
+pip install -r requirements.txt
+```
+
+### Create .env file
 
 Copy the .env.example file as a .env file and update the variables.
 
-Load the variables defined in your .env file into your current shell session so they can be used by CLI commands (such as gcloud, gsutil, and setup scripts).
+### Load environment variables into your shell
+
+Load the variables defined in your .env file into your current shell session so they can be accessed by docker-composer.yaml
 
 ```bash
 set -a
