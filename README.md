@@ -2,6 +2,8 @@
 
 This README file has been created using a Linux terminal.
 
+This project uses the Google Cloud SDK (`gcloud`). - This is a prerequisite for the linux terminal.
+
 ### Clone and navigate to the repo
 
 ```bash
@@ -30,7 +32,10 @@ pip install -r requirements.txt
 
 ### Create .env file
 
-Copy the .env.example file as a .env file and update the variables.
+```bash
+cp .env.example .env
+# edit .env and set variable values
+```
 
 ### Load environment variables into your shell
 
@@ -42,41 +47,59 @@ source .env
 set +a
 ```
 
-### GCP structure
+## Google Cloud Setup
 
-Within your GCP account, create a project and within that project create the development bucket.
-Upload your traffic_data.csv file to the buckets in ./data/traffic_data.csv.
+### Authenticate with Google Cloud
 
-### Set your user ID (avoids permission issues)
-
-```bash
-# Check your user ID
-id -u
-
-# If it's not 1000, update .env:
-echo "AIRFLOW_UID=$(id -u)" > .env
-```
-
-## Authenticate with Google Cloud
-
-Log in with you Google account. 
+Ensure you are authenticated and have the correct project selected:
 
 ```bash
-gcloud init
+gcloud auth login
 gcloud auth application-default login
 ```
 
-### Ensuring Airflow has access to login credentials json file
+### Ensure you have a GCP project
 
-When running Airflow locally in Docker, Application Default Credentials must be readable by the container user.
-The gcloud auth application-default login file is created with restrictive permissions, which can cause Permission denied errors inside Docker.
-Fix by making the file world-readable:
+You can use an existing project or create a new one via the CLI.
+
+To create a new project:
 
 ```bash
+gcloud projects create website-traffic-etl-dev \
+  --name="Website Traffic ETL Dev"
+```
+
+> **Note:** Creating a project requires an active billing account.
+
+### Set project + create bucket + upload file
+
+```bash
+gcloud config set project "$PROJECT_ID"
+
+gcloud auth application-default set-quota-project "$PROJECT_ID"
+
+gcloud storage buckets create "gs://$GCS_BUCKET" \
+  --location=EU \
+  --uniform-bucket-level-access
+
+gcloud storage cp ./data/traffic_data.csv "gs://$GCS_BUCKET/data/traffic_data.csv"
+```
+
+### Prep local folders for docker permissions
+
+When running Airflow locally in Docker, the container writes logs and metadata to mounted directories on the host (./logs and ./sqlite).
+
+Create the required directories and grant write access:
+
+```bash
+mkdir -p logs sqlite
+chmod -R 777 logs sqlite
+chmod 755 ~/.config
+chmod 755 ~/.config/gcloud
 chmod 644 ~/.config/gcloud/application_default_credentials.json
 ```
 
-### Create the Google connection
+### Create the Airflow GCP connection (after it’s running)
 
 ```bash
 docker compose exec airflow airflow connections add google_cloud_default \

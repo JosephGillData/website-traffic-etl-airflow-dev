@@ -44,6 +44,5 @@ Thumbs.db
 # docker-compose.override.yaml
 
 /.claude
-
 /airflow_home
 /sqlite
